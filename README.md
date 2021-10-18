@@ -1,0 +1,1 @@
+note: this might not be accurate, i made this to try using pygame

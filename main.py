@@ -45,8 +45,6 @@ class GameState():
     def intro(self):
         global RUN
         WIN.blit(BACKGROUND, (0, 0))
-        TITLEFONT = pygame.font.Font(
-            resource_path('assets/CozetteVector.ttf'), 60)
         starttext = TITLEFONT.render(
             'Start Game', True, (0, 0, 0), (255, 255, 255))
         quittext = TITLEFONT.render('Quit', True, (0, 0, 0), (255, 255, 255))
