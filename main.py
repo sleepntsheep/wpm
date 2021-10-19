@@ -57,8 +57,7 @@ class GameState():
         for event in pygame.event.get():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if WIDTH/2 <= mouse[0] <= WIDTH/2 + stwidth and HEIGHT/2 - 150 <= mouse[1] <= HEIGHT/2 + stheight - 150:
-                    self.starttime = pygame.time.get_ticks()
-                    self.state = 'main_game'
+                    self.restart()
                 elif WIDTH/2 <= mouse[0] <= WIDTH/2 + qtwidth and HEIGHT/2 + 150 <= mouse[1] <= HEIGHT/2 + qtheight + 150:
                     RUN = 0
             elif event.type == pygame.QUIT:
@@ -70,7 +69,7 @@ class GameState():
         WIN.blit(BACKGROUND, (0, 0))
         
         if player.health < 1:
-            safegame(player, 'save.csv')
+            self.safegame(player, 'save.csv')
             self.state = 'gameover'
 
         while len(onscreen) < 10:
@@ -81,8 +80,14 @@ class GameState():
             if word.x > WIDTH:
                 onscreen.remove(word)
                 player.health -= 1
-            WIN.blit(MYFONT.render(word.text, 1, (0, 0, 0)),
-                     (int(word.x), word.y))
+            if word.text.startswith(player.input):
+                tt = MYFONT.render(player.input, 1, (0, 255, 0))
+                tt2 = MYFONT.render(word.text[len(player.input):], 1, (0, 0, 0))
+                WIN.blit(tt, (int(word.x), word.y))
+                WIN.blit(tt2, (int(word.x) + int(tt.get_width()), word.y))
+            else:
+                WIN.blit(MYFONT.render(word.text, 1, (0, 0, 0)),
+                    (int(word.x), word.y))
 
         player.time = (pygame.time.get_ticks() - self.starttime) / 1000
         player.wpm = int((player.score) / (player.time / 60))
@@ -100,9 +105,9 @@ class GameState():
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
                 player.key = event.key
-                if event.key == 8:  # backspace
+                if event.key == pygame.K_BACKSPACE:  # backspace
                     player.input = player.input[:-1]
-                elif event.key == 32 or event.key == 13:  # spacebar
+                elif event.key == pygame.K_SPACE or event.key == pygame.K_RETURN:  # spacebar
                     found = 0
                     for word in onscreen:
                         if word.text == player.input:
@@ -114,8 +119,8 @@ class GameState():
                         player.score += 1
                     else:
                         player.input = ''
-                elif event.key == 27: # esc
-                    safegame(player, 'save.csv')
+                elif event.key == pygame.K_ESCAPE: # esc
+                    self.safegame(player, 'save.csv')
                     self.state = 'gameover'
                 else:
                     player.input += event.unicode
@@ -151,9 +156,7 @@ class GameState():
         for event in pygame.event.get():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if WIDTH - 500 <= mouse[0] <= WIDTH - 500 + stwidth and HEIGHT - 100 <= mouse[1] <= HEIGHT - 100 + stheight:
-                    self.starttime = pygame.time.get_ticks()
-                    player = Player()
-                    self.state = 'main_game'
+                    self.restart()
                 elif WIDTH - 200 <= mouse[0] <= WIDTH - 200 + qtwidth and HEIGHT - 100 <= mouse[1] <= HEIGHT - 100 + qtheight:
                     RUN = 0
             elif event.type == pygame.QUIT:
@@ -166,21 +169,27 @@ class GameState():
             self.main_game()
         elif self.state == 'gameover':
             self.gameover()
+            
+    def restart(self):
+        global onscreen, player
+        onscreen = []
+        self.starttime = pygame.time.get_ticks()
+        player = Player()
+        self.state = 'main_game'
 
+    def safegame(self, player, filename):
+        file_exists = os.path.isfile(filename)
 
-def safegame(player, filename):
-    file_exists = os.path.isfile(filename)
-
-    with open(filename, mode='a') as csvfile:
-        fieldnames = ['time', 'survived', 'wpm', 'score']
-        writer = csv.DictWriter(csvfile, delimiter=',', lineterminator='\n',fieldnames=fieldnames)
-        if not file_exists:
-            writer.writeheader()  # file doesn't exist yet, write a header
-        writer.writerow({
-            'time': datetime.datetime.now().strftime("%m/%d/%Y %H:%M:%S"),
-            'survived': player.time,
-            'wpm': player.wpm,
-            'score': player.score})
+        with open(filename, mode='a') as csvfile:
+            fieldnames = ['time', 'survived', 'wpm', 'score']
+            writer = csv.DictWriter(csvfile, delimiter=',', lineterminator='\n',fieldnames=fieldnames)
+            if not file_exists:
+                writer.writeheader()  # file doesn't exist yet, write a header
+            writer.writerow({
+                'time': datetime.datetime.now().strftime("%m/%d/%Y %H:%M:%S"),
+                'survived': player.time,
+                'wpm': player.wpm,
+                'score': player.score})
 
 player = Player()
 game_state = GameState()
