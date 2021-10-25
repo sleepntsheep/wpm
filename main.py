@@ -1,22 +1,14 @@
-import pygame
-import time
-import json
-import math
-import random
-import sys
+# import time
+# import json
+# import math
+# import sys
 import os
+import pygame
+import random
 import csv
 import datetime
-
-def resource_path(relative_path):
-    if hasattr(sys, '_MEIPASS'):
-        return os.path.join(sys._MEIPASS, relative_path)
-    return os.path.join(os.path.abspath("."), relative_path)
-
-with open(resource_path('assets/words.json'), 'r') as wordfile:
-    data = wordfile.read()
-words = json.loads(data)['data']
-
+from config import *
+# import pygame.gfxdraw
 
 class Player:
     def __init__(self):
@@ -27,38 +19,61 @@ class Player:
         self.speed = 1000
         self.time = 0
         self.wpm = 0
-        self.acc = 0.1
+        self.acc = 0
         self.health = 10
 
-
-class Word:
-    def __init__(self, text, x, y):
+class Button:
+    def __init__(self, text:str, x:int, y:int, win, padding = 4, color=(0, 0, 0, 100), textcolor=(240, 240, 240)):
         self.text = text
-        self.x = x
-        self.y = y
+        self.color = color
+        self.padding = padding
+        self.x = x - padding
+        self.y = y - padding
+        self.textcolor = textcolor
+        self.draw(win)
 
+    def draw(self, win):
 
-class GameState():
+        if self.text != '':
+            text = MYFONT.render(self.text, 1, (self.textcolor))
+            self.textwidth = text.get_width()
+            self.textheight = text.get_height()
+
+        self.nx = self.textwidth + 2 * self.padding
+        self.ny = self.textheight + 2 * self.padding
+
+        s = pygame.Surface((self.nx, self.ny), pygame.SRCALPHA)  
+        s.fill(self.color)
+        win.blit(s, (self.x - self.textwidth/2, self.y - self.textheight/2))
+            
+        win.blit(text, (self.x + self.padding - self.textwidth/2, self.y + self.padding - self.textheight/2))
+
+    def isOver(self, pos):
+        if self.nx - self.textwidth/2 + self.x > pos[0] > self.x - self.textwidth/2:
+            if self.y - self.textheight/2 + self.ny > pos[1] > self.y - self.textheight/2:
+                return True
+
+class Game():
     def __init__(self):
         self.state = 'intro'
+        self.onscreen = []
+        self.clock = pygame.time.Clock()
+        pygame.display.set_caption('WPM')
+        self.player = Player()
 
     def intro(self):
         global RUN
         WIN.blit(BACKGROUND, (0, 0))
-        starttext = TITLEFONT.render(
-            'Start Game', True, (0, 0, 0), (255, 255, 255))
-        quittext = TITLEFONT.render('Quit', True, (0, 0, 0), (255, 255, 255))
-        WIN.blit(starttext, (WIDTH/2, HEIGHT/2 - 150))
-        WIN.blit(quittext, (WIDTH/2, HEIGHT/2 + 150))
-        stwidth, stheight = starttext.get_width(), starttext.get_height()
-        qtwidth, qtheight = quittext.get_width(), quittext.get_height()
+        startbutton = Button('Start game', WIDTHCENTER, HEIGHTCENTER - 100, WIN, padding=10)
+        quitbutton = Button('Quit game', WIDTHCENTER, HEIGHTCENTER, WIN, padding=10)
+
         pygame.display.update()
         mouse = pygame.mouse.get_pos()
         for event in pygame.event.get():
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if WIDTH/2 <= mouse[0] <= WIDTH/2 + stwidth and HEIGHT/2 - 150 <= mouse[1] <= HEIGHT/2 + stheight - 150:
+                if startbutton.isOver(mouse):
                     self.restart()
-                elif WIDTH/2 <= mouse[0] <= WIDTH/2 + qtwidth and HEIGHT/2 + 150 <= mouse[1] <= HEIGHT/2 + qtheight + 150:
+                elif quitbutton.isOver(mouse):
                     RUN = 0
             elif event.type == pygame.QUIT:
                 RUN = 0
@@ -68,96 +83,89 @@ class GameState():
 
         WIN.blit(BACKGROUND, (0, 0))
         
-        if player.health < 1:
-            self.safegame(player, 'save.csv')
+        if self.player.health < 1:
+            self.safegame(self.player, 'save.csv')
             self.state = 'gameover'
 
-        while len(onscreen) < 10:
-            onscreen.append(Word(random.choice(words), random.randint(1, 200), random.randint(1, HEIGHT - 100)))
+        while len(self.onscreen) < 10:
+            newword = [random.choice(words), random.randint(1, 200), random.randint(1, HEIGHT - 100)]
+            self.onscreen.append(newword)
 
-        for word in onscreen:
-            word.x += player.speed / 1000
-            if word.x > WIDTH:
-                onscreen.remove(word)
-                player.health -= 1
-            if word.text.startswith(player.input):
-                tt = MYFONT.render(player.input, 1, (0, 255, 0))
-                tt2 = MYFONT.render(word.text[len(player.input):], 1, (0, 0, 0))
-                WIN.blit(tt, (int(word.x), word.y))
-                WIN.blit(tt2, (int(word.x) + int(tt.get_width()), word.y))
+        for word in self.onscreen:
+            word[1] += self.player.speed / 1000
+            if word[1] > WIDTH:
+                self.onscreen.remove(word)
+                self.player.health -= 1
+            if word[0].startswith(self.player.input):
+                tt = MYFONT.render(self.player.input, 1, (0, 255, 0))
+                tt2 = MYFONT.render(word[0][len(self.player.input):], 1, (240, 240, 240))
+                WIN.blit(tt, (int(word[1]), word[2]))
+                WIN.blit(tt2, (int(word[1]) + int(tt.get_width()), word[2]))
             else:
-                WIN.blit(MYFONT.render(word.text, 1, (0, 0, 0)),
-                    (int(word.x), word.y))
+                WIN.blit(MYFONT.render(word[0], 1, (240, 240, 240)),
+                    (int(word[1]), word[2]))
 
-        player.time = (pygame.time.get_ticks() - self.starttime) / 1000
-        player.wpm = int((player.score) / (player.time / 60))
+        self.player.time = (pygame.time.get_ticks() - self.starttime) / 1000
+        self.player.wpm = int((self.player.score) / (self.player.time / 60))
 
         pygame.draw.rect(BACKGROUND, (240, 240, 240),
-                         pygame.Rect(0, HEIGHT-70, WIDTH, 70))
+                         pygame.Rect(0, HEIGHT-40, WIDTH, 70))
 
         WIN.blit(MYFONT.render(
-            f'count:{player.score}, wpm:{player.wpm}, HP:{player.health}, T:{round(player.time, 2)}, [{player.input}]', 1, (0, 0, 0)), (10, HEIGHT-60))
+            f'count:{self.player.score}, wpm:{self.player.wpm}, HP:{self.player.health}, T:{round(self.player.time, 2)}, [{self.player.input}]', 1, (0, 0, 0)), (10, HEIGHT-35))
 
         pygame.display.update()
 
-        player.speed += player.acc
+        self.player.speed += self.player.acc
 
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
-                player.key = event.key
+                self.player.key = event.key
                 if event.key == pygame.K_BACKSPACE:  # backspace
-                    player.input = player.input[:-1]
+                    self.player.input = self.player.input[:-1]
                 elif event.key == pygame.K_SPACE or event.key == pygame.K_RETURN:  # spacebar
                     found = 0
-                    for word in onscreen:
-                        if word.text == player.input:
+                    for word in self.onscreen:
+                        if word[0] == self.player.input:
                             found = 1
                             break
                     if found:
-                        onscreen.remove(word)
-                        player.input = ''
-                        player.score += 1
+                        self.onscreen.remove(word)
+                        self.player.input = ''
+                        self.player.score += 1
                     else:
-                        player.input = ''
+                        self.player.input = ''
                 elif event.key == pygame.K_ESCAPE: # esc
-                    self.safegame(player, 'save.csv')
+                    self.safegame(self.player, 'save.csv')
                     self.state = 'gameover'
                 else:
-                    player.input += event.unicode
+                    self.player.input += event.unicode
             elif event.type == pygame.QUIT:
                 RUN = False
                 break
 
     def gameover(self):
-        global RUN, player
+        global RUN
             
         WIN.blit(BACKGROUND, (0, 0))
-        gameovertext = TITLEFONT.render('Game over', True, (0, 0, 0), (255, 255, 255))
-        starttext = TITLEFONT.render(
-            'Restart', True, (0, 0, 0), (255, 255, 255))
-        quittext = TITLEFONT.render('Quit', True, (0, 0, 0), (255, 255, 255))
-        
-        stwidth, stheight = starttext.get_width(), starttext.get_height()
-        qtwidth, qtheight = quittext.get_width(), quittext.get_height()
-        gowidth, goheight = gameovertext.get_width(), gameovertext.get_height()
-        
-        WIN.blit(starttext, (WIDTH - 500, HEIGHT - 100))
-        WIN.blit(quittext, (WIDTH - 200, HEIGHT - 100))
-        WIN.blit(gameovertext, (WIDTH/2 - gowidth/2, HEIGHT/2 - goheight/2))
-        
+
+        restartbutton = Button('Restart', WIDTH-250, HEIGHT-20, WIN)
+        quitbutton = Button('Quit', WIDTH-100, HEIGHT-20, WIN)
+        gameover = Button('Gameover', WIDTHCENTER, HEIGHTCENTER, WIN)
+
         pygame.draw.rect(BACKGROUND, (240, 240, 240),
-                         pygame.Rect(0, HEIGHT-70, WIDTH, 70))
+                         pygame.Rect(0, HEIGHT-40, WIDTH, 70))
 
         WIN.blit(MYFONT.render(
-            f'count:{player.score}, wpm:{player.wpm}, HP:{player.health}, T:{round(player.time, 2)}, [{player.input}]', 1, (0, 0, 0)), (10, HEIGHT-60))
+            f'count:{self.player.score}, wpm:{self.player.wpm}, HP:{self.player.health}, T:{round(self.player.time, 2)}, [{self.player.input}]', 1, (0, 0, 0)), (10, HEIGHT-35))
 
         pygame.display.update()
         mouse = pygame.mouse.get_pos()
         for event in pygame.event.get():
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if WIDTH - 500 <= mouse[0] <= WIDTH - 500 + stwidth and HEIGHT - 100 <= mouse[1] <= HEIGHT - 100 + stheight:
+                if restartbutton.isOver(mouse):
                     self.restart()
-                elif WIDTH - 200 <= mouse[0] <= WIDTH - 200 + qtwidth and HEIGHT - 100 <= mouse[1] <= HEIGHT - 100 + qtheight:
+                elif quitbutton.isOver(mouse):
                     RUN = 0
             elif event.type == pygame.QUIT:
                 RUN = 0
@@ -169,17 +177,17 @@ class GameState():
             self.main_game()
         elif self.state == 'gameover':
             self.gameover()
+        elif self.state == 'result':
+            pass
             
     def restart(self):
-        global onscreen, player
-        onscreen = []
+        self.player = Player()
+        self.onscreen = []
         self.starttime = pygame.time.get_ticks()
-        player = Player()
         self.state = 'main_game'
 
     def safegame(self, player, filename):
         file_exists = os.path.isfile(filename)
-
         with open(filename, mode='a') as csvfile:
             fieldnames = ['time', 'survived', 'wpm', 'score']
             writer = csv.DictWriter(csvfile, delimiter=',', lineterminator='\n',fieldnames=fieldnames)
@@ -191,27 +199,12 @@ class GameState():
                 'wpm': player.wpm,
                 'score': player.score})
 
-player = Player()
-game_state = GameState()
-
-BACKGROUND = pygame.image.load(resource_path('assets/bg.jfif'))
-WIDTH, HEIGHT = BACKGROUND.get_width(), BACKGROUND.get_height()
-WIN = pygame.display.set_mode((WIDTH, HEIGHT))
-RUN = 1
-FPS = 60
-pygame.font.init()
-MYFONT = pygame.font.Font(resource_path('assets/CozetteVector.ttf'), 30)
-TITLEFONT = pygame.font.Font(resource_path('assets/CozetteVector.ttf'), 60)
-
-pygame.display.set_caption("Typing of the dead")
-clock = pygame.time.Clock()
-onscreen = []
-
-def main():
-    while RUN:
-        game_state.state_manager()
-        clock.tick(FPS)
-    pygame.quit()
+    def run(self):
+        while RUN:
+            self.state_manager()
+            self.clock.tick(FPS)
+        pygame.quit()
 
 if __name__ == '__main__':
-    main()
+    game = Game()
+    game.run()
