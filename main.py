@@ -7,15 +7,15 @@ from config import *
 
 class Player:
     def __init__(self):
-        self.score = 0
-        self.missed = 0
-        self.input = ''
+        self.score: int = 0
+        self.missed: int = 0
+        self.input: str = ''
         self.key = None
-        self.speed = 1000
-        self.time = 0
-        self.wpm = 0
-        self.acc = 0.5
-        self.health = 10
+        self.speed: int = 1000
+        self.time: float = 0
+        self.wpm: float = 0
+        self.acc: float = 0.5
+        self.health: int = 10
 
 class Button:
     def __init__(self, text:str, x:int, y:int, win, font, padding = 4, color=(0, 0, 0, 100), textcolor=(240, 240, 240)):
@@ -30,10 +30,12 @@ class Button:
         self.draw()
 
     def draw(self):
-        if self.text != '':
-            text = self.font.render(self.text, 1, (self.textcolor))
-            self.textwidth = text.get_width()
-            self.textheight = text.get_height()
+        if self.text == '':
+            return
+
+        text = self.font.render(self.text, 1, (self.textcolor))
+        self.textwidth = text.get_width()
+        self.textheight = text.get_height()
 
         self.nx = self.textwidth + 2 * self.padding
         self.ny = self.textheight + 2 * self.padding
@@ -49,10 +51,20 @@ class Button:
             if self.y - self.textheight/2 + self.ny > pos[1] > self.y - self.textheight/2:
                 return True
 
+class Word():
+    def __init__(self):
+        self.text = random.choice(WORDS)
+        self.x = random.randint(0, 200)
+        self.y = random.randint(0, HEIGHT - 100)
+
+    def draw(self, win):
+        ...
+
+
 class Game():
     def __init__(self):
-        self.state = 'intro'
-        self.onscreen = []
+        self.state: str = 'intro'
+        self.onscreen: list = []
         self.clock = pygame.time.Clock()
         pygame.display.set_caption('WPM')
         self.player = Player()
@@ -92,23 +104,23 @@ class Game():
             self.safegame(self.player, SAVEFILE)
             self.state = 'gameover'
 
-        while len(self.onscreen) < 10:
-            newword = [random.choice(words), random.randint(1, 200), random.randint(1, HEIGHT - 100)]
-            self.onscreen.append(newword)
+        while len(self.onscreen) < 15:
+            new_word: Word = Word()
+            self.onscreen.append(new_word)
 
         for word in self.onscreen:
-            word[1] += self.player.speed / 1000
-            if word[1] > WIDTH:
+            word.x += self.player.speed / 1000
+            if word.x > WIDTH:
                 self.onscreen.remove(word)
                 self.player.health -= 1
-            if word[0].startswith(self.player.input):
-                tt = self.font().render(self.player.input, 1, (0, 255, 0))
-                tt2 = self.font().render(word[0][len(self.player.input):], 1, (240, 240, 240))
-                self.WIN.blit(tt, (int(word[1]), word[2]))
-                self.WIN.blit(tt2, (int(word[1]) + int(tt.get_width()), word[2]))
+            if word.text.startswith(self.player.input):
+                tt = self.font().render(self.player.input, True, (0, 255, 0))
+                tt2 = self.font().render(word.text[len(self.player.input):], True, (240, 240, 240))
+                self.WIN.blit(tt, (int(word.x), word.y))
+                self.WIN.blit(tt2, (int(word.x) + int(tt.get_width()), word.y))
             else:
-                self.WIN.blit(self.font().render(word[0], 1, (240, 240, 240)),
-                    (int(word[1]), word[2]))
+                self.WIN.blit(self.font().render(word.text, True, (240, 240, 240)),
+                    (int(word.x), word.y))
 
         self.player.time = (pygame.time.get_ticks() - self.starttime) / 1000
         self.player.wpm = int((self.player.score) / (self.player.time / 60))
@@ -117,11 +129,11 @@ class Game():
                          pygame.Rect(0, HEIGHT-40, WIDTH, 70))
 
         self.WIN.blit(self.font().render(
-            f'count:{self.player.score}, wpm:{self.player.wpm}, HP:{self.player.health}, T:{round(self.player.time, 2)}, [{self.player.input}]', 1, (0, 0, 0)), (10, HEIGHT-35))
+            f'count:{self.player.score}, wpm:{self.player.wpm}, HP:{self.player.health}, T:{round(self.player.time, 2)}, [{self.player.input}]', True, (0, 0, 0)), (10, HEIGHT-35))
 
         pygame.display.update()
 
-        self.player.speed += self.player.acc
+        self.player.speed += int(self.player.acc)
 
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
@@ -130,12 +142,13 @@ class Game():
                     self.player.input = self.player.input[:-1]
                 elif event.key == pygame.K_SPACE or event.key == pygame.K_RETURN:  # spacebar
                     found = 0
+                    submit: str = self.player.input
                     for word in self.onscreen:
-                        if word[0] == self.player.input:
+                        if word.text == submit:
+                            self.onscreen.remove(word)
                             found = 1
                             break
                     if found:
-                        self.onscreen.remove(word)
                         self.player.input = ''
                         self.player.score += 1
                     else:
@@ -154,15 +167,15 @@ class Game():
             
         self.WIN.blit(self.BACKGROUND, (0, 0))
 
-        restartbutton = Button('Restart', WIDTH-250, HEIGHT-20, self.WIN, self.font())
-        quitbutton = Button('Quit', WIDTH-100, HEIGHT-20, self.WIN, self.font())
-        gameover = Button('Gameover', WIDTHCENTER, 100, self.WIN, self.font(50))
+        restartbutton: Button = Button('Restart', WIDTH-250, HEIGHT-20, self.WIN, self.font())
+        quitbutton: Button = Button('Quit', WIDTH-100, HEIGHT-20, self.WIN, self.font())
+        gameover: Button = Button('Gameover', WIDTHCENTER, 100, self.WIN, self.font(50))
 
         pygame.draw.rect(self.BACKGROUND, (240, 240, 240),
                          pygame.Rect(0, HEIGHT-40, WIDTH, 70))
 
         self.WIN.blit(self.font().render(
-            f'count:{self.player.score}, wpm:{self.player.wpm}, HP:{self.player.health}, T:{round(self.player.time, 2)}, [{self.player.input}]', 1, (0, 0, 0)), (10, HEIGHT-35))
+            f'count:{self.player.score}, wpm:{self.player.wpm}, HP:{self.player.health}, T:{round(self.player.time, 2)}, [{self.player.input}]', True, (0, 0, 0)), (10, HEIGHT-35))
 
         with open(SAVEFILE, 'r') as f:
             lines = f.readlines()

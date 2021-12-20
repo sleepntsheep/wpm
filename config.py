@@ -1,4 +1,3 @@
-import pygame
 import sys
 import os
 import json
@@ -8,18 +7,20 @@ def resource_path(relative_path):
         return os.path.join(sys._MEIPASS, relative_path)
     return os.path.join(os.path.abspath("."), relative_path)
 
-RUN = 1
+RUN = True
 
-FPS = 60
+FPS: int = 60
 
-WIDTH, HEIGHT = 1200, 800
+WIDTH: int = 1200
+HEIGHT: int = 800
 
-WIDTHCENTER, HEIGHTCENTER = WIDTH/2, HEIGHT/2
+WIDTHCENTER: int = int(WIDTH/2)
+HEIGHTCENTER: int = int(HEIGHT/2)
 
-SAVEFILE = 'save.csv'
+SAVEFILE: str = 'save.csv'
 
 with open(resource_path('assets/words.json'), 'r') as wordfile:
     data = wordfile.read()
-words = json.loads(data)['data']
+WORDS: list = json.loads(data)['data']
 
 
